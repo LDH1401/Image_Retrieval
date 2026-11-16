@@ -20,13 +20,23 @@ records the settings; a run with other settings refuses to append to it.
 Uses PyTorch + transformers only (not the JAX code of this repo), and is meant
 for a GPU runtime such as Google Colab (see vlm_rerank_colab.ipynb).
 
+--adapter scores with a LoRA adapter trained by vlm_lora_train.py (Hướng 3),
+merged into the model; it needs peft. The adapter's name and a hash of its
+weights go into the .meta.json file.
+
 Usage:
   python vlm_rerank.py --bundle_dir /content/bundle \
     --out /content/drive/MyDrive/magiclens_vlm/vlm_scores.jsonl
+  # Hướng 3: a larger VLM, or the 2B model with a LoRA adapter
+  python vlm_rerank.py --bundle_dir /content/bundle --model Qwen/Qwen2-VL-7B-Instruct \
+    --dtype bfloat16 --out .../vlm_scores_7b.jsonl
+  python vlm_rerank.py --bundle_dir /content/bundle --dtype bfloat16 \
+    --adapter .../lora_2b/ckpt-02178 --out .../vlm_scores_2b_lora.jsonl
 """
 from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
+import hashlib
 import json
 import math
 import os
@@ -65,11 +75,14 @@ class Scorer:
   CPU part and can run in another thread; score() is the GPU part.
   """
 
-  def __init__(self, model_id, dtype, max_pixels, device, load, vision_cache=True):
+  def __init__(self, model_id, dtype, max_pixels, device, load, vision_cache=True, adapter=None):
     self.device, self.load = device, load
     self.processor = AutoProcessor.from_pretrained(model_id, max_pixels=max_pixels)
     self.processor.tokenizer.padding_side = "left"  # last position = answer token
     self.model = AutoVLM.from_pretrained(model_id, torch_dtype=dtype).to(device).eval()
+    if adapter:  # LoRA of vlm_lora_train.py, merged so the rest is unchanged
+      from peft import PeftModel  # pylint: disable=import-outside-toplevel
+      self.model = PeftModel.from_pretrained(self.model, adapter).merge_and_unload().eval()
     tok = self.processor.tokenizer
     yes, no = (tok.encode(w, add_special_tokens=False) for w in ("Yes", "No"))
     if len(yes) != 1 or len(no) != 1:
@@ -78,7 +91,9 @@ class Scorer:
     # just that position, and the difference is taken in float32 (a bfloat16
     # head would round the log-odds to steps of ~0.1).
     head = self.model.get_output_embeddings()
-    self.w = (head.weight[yes[0]] - head.weight[no[0]]).float()
+    # Detached: the head is never trained, and vlm_lora_train.py backpropagates
+    # through scores made with w.
+    self.w = (head.weight[yes[0]] - head.weight[no[0]]).detach().float()
     self.b = 0.0 if head.bias is None else float(head.bias[yes[0]] - head.bias[no[0]])
     self.last = None
 
@@ -145,6 +160,20 @@ class Scorer:
     return (self.last @ self.w + self.b).tolist()
 
 
+def adapter_id(path):
+  """Name (last two folders) and weight hash of a LoRA adapter folder."""
+  weights = os.path.join(path, "adapter_model.safetensors")
+  if not os.path.exists(weights):
+    raise SystemExit(f"No adapter_model.safetensors in {path}: give a checkpoint folder of "
+                     "vlm_lora_train.py (e.g. .../lora_2b/ckpt-02178).")
+  digest = hashlib.sha256()
+  with open(weights, "rb") as f:
+    for block in iter(lambda: f.read(1 << 20), b""):
+      digest.update(block)
+  parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
+  return "/".join(parts[-2:]), digest.hexdigest()[:16]
+
+
 def load_done(path):
   """Query ids already in the JSONL output; drops a line cut by a crash."""
   done, lines = set(), []
@@ -182,6 +211,8 @@ if __name__ == "__main__":
                       help="Run without a GPU (very slow; for testing only).")
   parser.add_argument("--no_vision_cache", action="store_true",
                       help="Re-encode every image in every pair (slower fallback).")
+  parser.add_argument("--adapter", default="",
+                      help="Folder of a LoRA adapter saved by vlm_lora_train.py (needs peft).")
   args = parser.parse_args()
 
   if not torch.cuda.is_available() and not args.allow_cpu:
@@ -203,6 +234,8 @@ if __name__ == "__main__":
           "dtype": str(dtype).replace("torch.", ""), "vision_cache": not args.no_vision_cache,
           "transformers": transformers.__version__,
           "candidates": {c: data[c] for c in keys} | {"n_queries": len(data["queries"])}}
+  if args.adapter:  # only then, so the meta of the runs without one stays as it was
+    meta["adapter"], meta["adapter_sha256"] = adapter_id(args.adapter)
   meta_path = args.out + ".meta.json"
   if os.path.exists(meta_path):
     with open(meta_path) as f:
@@ -220,7 +253,9 @@ if __name__ == "__main__":
   todo = [q for q in queries if q["q"] not in done]
   print(f"Candidates of {data.get('ranker', 'the released checkpoint')}: "
         f"{len(done)} queries already scored, {len(todo)} to go "
-        f"({len(todo) * k} pairs, top-{k}); model {args.model}, {meta['dtype']} on {device}"
+        f"({len(todo) * k} pairs, top-{k}); model {args.model}"
+        + (f" + LoRA {meta['adapter']}" if args.adapter else "")
+        + f", {meta['dtype']} on {device}"
         + (f" ({torch.cuda.get_device_name()})" if device == "cuda" else "")
         + ("" if meta["vision_cache"] else ", no vision cache"))
   if not todo:
@@ -228,7 +263,7 @@ if __name__ == "__main__":
   image = lru_cache(maxsize=256)(lambda iid: Image.open(
       os.path.join(args.bundle_dir, "images", iid + ".png")).convert("RGB"))
   scorer = Scorer(args.model, dtype, args.max_pixels, device, image,
-                  vision_cache=meta["vision_cache"])
+                  vision_cache=meta["vision_cache"], adapter=args.adapter or None)
 
   # One job per batch of a query's candidates; batches never span two queries.
   jobs = []

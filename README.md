@@ -83,6 +83,8 @@ Phần này không có trong repo gốc.
 - [docs/tai_hien_benchmark.md](docs/tai_hien_benchmark.md) và [notebooks/](notebooks/): tái hiện các benchmark của bài báo trên Google Colab.
 - [docs/huong_dan_vlm_rerank.md](docs/huong_dan_vlm_rerank.md): rerank top-K của MagicLens bằng VLM (Qwen2-VL) trên FashionIQ.
 - [docs/huong1_tinh_chinh_rerank.md](docs/huong1_tinh_chinh_rerank.md): Hướng 1, ghép MagicLens đã tinh chỉnh với rerank bằng VLM.
+- [docs/huong3_reranker_manh_hon.md](docs/huong3_reranker_manh_hon.md): Hướng 3, reranker mạnh hơn (Qwen2-VL-7B và LoRA cho Qwen2-VL-2B).
+- [docs/BaoCao_MagicLens.docx](docs/BaoCao_MagicLens.docx): báo cáo bài tập lớn. Chương 8 trình bày các thực nghiệm của dự án.
 
 ## Trích dẫn công trình này
 

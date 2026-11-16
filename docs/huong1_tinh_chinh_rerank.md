@@ -182,7 +182,7 @@ Nhận xét:
   - MagicLens lại tách tốt hơn: AUC tăng từ 0.739 lên 0.761. VLM giờ yếu hơn bước 1, nên trọng số w chọn trên dev giảm từ 3 xuống 1.5.
   - Hai điểm vẫn bổ sung cho nhau: tương quan gần như không đổi (0.15 → 0.17), và AUC khi trộn (0.796) cao hơn từng điểm riêng.
 - **VLM một mình không đủ.** (d) chỉ hơn (c) 1.1 điểm, không có ý nghĩa thống kê. Xếp lại cả top-50 chỉ theo VLM còn kéo R@10 xuống 31.6; vì vậy dev chọn top-20 cho (d).
-- **Còn nhiều chỗ để cải thiện.** Ảnh đích nằm trong top-50 ở 57.9% truy vấn test, nhưng sau rerank chỉ 36.6% có ảnh đích trong top-10. Đây là lý do để thử Hướng 3, dùng reranker mạnh hơn VLM 2B zero-shot.
+- **Còn nhiều chỗ để cải thiện.** Ảnh đích nằm trong top-50 ở 57.9% truy vấn test, nhưng sau rerank chỉ 36.6% có ảnh đích trong top-10. Đây là lý do để thử Hướng 3, dùng reranker mạnh hơn VLM 2B zero-shot ([huong3_reranker_manh_hon.md](huong3_reranker_manh_hon.md)). Trên cùng tập ứng viên, Hướng 3 đưa R@10 lên 41.8 với VLM 7B và 45.9 với VLM 2B + LoRA.
 - **Một hiện tượng phụ: bản tinh chỉnh hay trả về chính ảnh truy vấn.**
   - Ảnh truy vấn nằm trong top-10 ở 121 truy vấn test, so với 31 ở bản zero-shot. Sau rerank chỉ còn 33.
   - Mức tăng của rerank không đến từ việc đẩy ảnh truy vấn xuống: khi lọc ảnh truy vấn khỏi cả hai danh sách, chênh lệch vẫn là +2.4 [+0.4, +4.3].
@@ -205,7 +205,6 @@ Nhận xét:
   - Thử nhân một lớp của backbone ảnh với 1.01: lệch 0.0074, nên bị chặn.
 - **Toàn bộ bước 5, chạy với điểm VLM giả:** `vlm_rerank_eval.py` và `huong1_tong_hop.py` chạy hết. Các hàng (a), (b), (c) khớp kết quả cũ: 23.3, 28.5, 34.2, và (b) − (a) = +5.2 [+3.0, +7.2].
 - **`bundle.zip`:** chứa đúng bản `vlm_rerank.py` đã sửa.
-
 - **Chạy thật trên Colab (16/11/2026):**
   - `vlm_scores.jsonl` có đủ 1861 truy vấn.
   - Tệp `.meta.json` mang đúng `ranker` của checkpoint tinh chỉnh, và mọi thiết lập VLM khác trùng với lần zero-shot.

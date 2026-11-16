@@ -162,12 +162,23 @@ Cách đánh giá chung:
 | (b) MagicLens + VLM, rerank top-50 (w = 3) | Không⁴ | 10.8 | 21.7 | 28.5 | 42.1 | **+5.2 [+3.0, +7.2]** |
 | (c) Tinh chỉnh khối hợp nhất | Có | 11.5 | 25.7 | 34.2 | 57.9 | **+10.8 [+8.3, +13.3]** |
 | (d) (c), xếp lại top-20 chỉ theo VLM | Có | 10.7 | 25.3 | 35.2 | 57.9 | +11.9 [+9.1, +14.6] |
-| (e) (c) + MagicLens + VLM, top-50 (w = 1.5) (Hướng 1) | Có | **15.1** | **29.8** | **36.6** | 57.9 | **+13.3 [+10.7, +16.0]** |
+| (e) (c) + MagicLens + VLM, top-50 (w = 1.5) (Hướng 1) | Có | 15.1 | 29.8 | 36.6 | 57.9 | **+13.3 [+10.7, +16.0]** |
+| (f) như (e), VLM 7B thay cho 2B (w = 2) (Hướng 3) | Có | **19.1** | 34.2 | 41.8 | 57.9 | **+18.5 [+15.5, +21.3]** |
+| (g) như (e), VLM 2B + LoRA (w = 2) (Hướng 3) | Có⁵ | 18.9 | **37.2** | **45.9** | 57.9 | **+22.6 [+19.4, +25.7]** |
 
 ³ Mẫu câu "{c2} and {c1}" kết hợp rerank top-100 bằng điểm CLIP ảnh–ảnh và văn bản–ảnh (λ = 0.6, μ = 0.3).
 ⁴ Nhãn của nửa dev chỉ được dùng để chọn k và w.
+⁵ Cả MagicLens lẫn VLM đều học trên tập train của FashionIQ dress; VLM được tinh chỉnh LoRA.
 
-Khoảng tin cậy chứa 0 nghĩa là chênh lệch không có ý nghĩa thống kê. Hai cải tiến có ý nghĩa là rerank bằng VLM khi trộn với điểm MagicLens, và tinh chỉnh. Ghép cả hai, tức (e), cho kết quả tốt nhất: R@10 36.6, R@1 15.1. Mức tăng của (d) so với (a) chủ yếu đến từ tinh chỉnh: so với (c), (d) chỉ hơn +1.1 [−1.1, +3.1].
+Khoảng tin cậy chứa 0 nghĩa là chênh lệch không có ý nghĩa thống kê.
+- Hai cải tiến có ý nghĩa là rerank bằng VLM khi trộn với điểm MagicLens, và tinh chỉnh.
+- Ghép cả hai cho (e): R@10 36.6, R@1 15.1.
+- Thay VLM bằng bản mạnh hơn (Hướng 3) tăng tiếp: 7B cho R@10 41.8, còn 2B + LoRA cho 45.9, cao nhất. So với (e), (g) hơn +9.2 [+6.9, +11.5].
+- Mức tăng của (d) so với (a) chủ yếu đến từ tinh chỉnh: so với (c), (d) chỉ hơn +1.1 [−1.1, +3.1].
+
+![R@10 trên test của các cấu hình (a)–(g)](images/08_ket_qua_r10.png)
+
+Biểu đồ được vẽ bằng `python docs/src/ve_bieu_do_ket_qua.py`. Đường đứt nét là R@50 của (c), tức mức trần khi xếp lại top-50 của (c).
 
 Chi tiết từng thí nghiệm. Bảng đầy đủ nằm trong `output/`.
 
@@ -190,6 +201,13 @@ Chi tiết từng thí nghiệm. Bảng đầy đủ nằm trong `output/`.
   - Rerank tác dụng mạnh nhất ở đầu danh sách: R@1 tăng từ 11.4 lên 15.1.
   - Trên ứng viên của bản tinh chỉnh, VLM tách ảnh đích kém hơn MagicLens (AUC 0.736 so với 0.761). Tương quan giữa hai điểm vẫn thấp (0.17), nên trộn vẫn có lợi (AUC 0.796).
   - Chấm 93 050 cặp mất 0.9 giờ GPU.
+- **Hướng 3, reranker mạnh hơn trên cùng ứng viên của (c)** ([huong3_reranker_manh_hon.md](huong3_reranker_manh_hon.md), mục 5; [output/huong3/huong3_tong_hop.md](../output/huong3/huong3_tong_hop.md)):
+  - Cả hai VLM mạnh hơn đều cải thiện rõ so với (e): 7B +5.2 [+3.1, +7.1], 2B + LoRA +9.2 [+6.9, +11.5] R@10. 2B + LoRA hơn cả 7B: +4.1 [+2.0, +6.1] R@10, nhưng R@1 của hai bản ngang nhau (18.9 và 19.1).
+  - VLM nay tách ảnh đích tốt hơn MagicLens: AUC 0.813 (7B) và 0.841 (LoRA), so với 0.761. Trộn vẫn có lợi: AUC 0.838 và 0.870.
+  - Mức tăng chủ yếu đến từ việc kéo ảnh đích ở hạng sâu lên. Trong các truy vấn có ảnh đích ở hạng 31–50 của bước 1, LoRA đưa được 41.8% vào top-10. Tỉ lệ này của 2B là 13.4%, của 7B là 20.9%.
+  - LoRA được dạy loại ảnh truy vấn. Tuy vậy, lọc ảnh truy vấn khỏi mọi kết quả không làm R@10 thay đổi, nên đó không phải nguồn gốc của mức tăng.
+  - LoRA học 2 epoch trong 51 phút. AUC dev tăng từ 0.730 lên 0.789.
+  - Đổi sang bfloat16 không làm VLM tốt lên. Trên 200 truy vấn, AUC đổi −0.001, còn đổi sang 7B tăng +0.066.
 
 ### 2.3. Kết quả đang chờ
 
@@ -203,4 +221,6 @@ Chi tiết từng thí nghiệm. Bảng đầy đủ nằm trong `output/`.
 - **Không so số ở mục 2.2 với Bảng 1 hay Bảng 12.** Mục 2.2 đo trên 931 truy vấn test của riêng dress, với kho thiếu 4.3% ảnh. Mốc đúng để so là dòng (a), 23.3, đo trên cùng tập truy vấn. Số "FIQ" của bài báo là trung bình ba danh mục trên toàn bộ tập val.
 - **Bản tinh chỉnh (c) không còn là zero-shot**, vì nó đã học trên tập train của FashionIQ. Mọi số của bài báo là zero-shot. Vì vậy không nên viết rằng 34.2 "vượt MagicLens-L CoCa (32.3 trên dress)": hai số khác cả giao thức lẫn tập truy vấn.
 - **Rerank bằng VLM (b) gần như zero-shot.** VLM không được huấn luyện thêm; dự án chỉ chọn hai tham số k và w trên nửa dev.
+- **(g) học trên FashionIQ ở cả hai bước.** MagicLens đã được tinh chỉnh, và VLM cũng được tinh chỉnh LoRA trên cùng tập train. Vì vậy (g) càng không so được với số zero-shot của bài báo.
+- **(e) chạy ở float16, còn (f) và (g) chạy ở bfloat16.** Phép kiểm tra trên 200 truy vấn cho thấy riêng kiểu số không làm VLM tốt lên. Xem [huong3_reranker_manh_hon.md](huong3_reranker_manh_hon.md), mục 5.3.
 - **R@1 của (c) có hai giá trị, 11.5 và 11.4.** Bước tinh chỉnh tính bằng JAX cho 11.5; bước xuất top-50 tính lại bằng NumPy cho 11.4. Ở một truy vấn, hai ảnh có điểm chỉ chênh 1.2 × 10⁻⁷ nên đổi chỗ. R@5, R@10 và R@50 không đổi. Xem [huong1_tinh_chinh_rerank.md](huong1_tinh_chinh_rerank.md), bước 2.

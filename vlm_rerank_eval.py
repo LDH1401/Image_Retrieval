@@ -20,6 +20,10 @@ the candidates.json it scored):
   # Hướng 1: rerank of the fine-tuned model's candidates
   python vlm_rerank_eval.py --candidates vlm_rerank_ft/candidates.json \
     --scores vlm_rerank_ft/vlm_scores.jsonl --output ./output/huong1
+  # Hướng 3: another VLM on the same candidates. Any VLM run other than the
+  # 2B model in float16 without adapter gets its name in the file names.
+  python vlm_rerank_eval.py --candidates vlm_rerank_ft/candidates.json \
+    --scores vlm_rerank_ft/vlm_scores_7b.jsonl --output ./output/huong3
 """
 from argparse import ArgumentParser
 import json
@@ -34,6 +38,25 @@ import numpy as np
 KS = (20, 30, 50)
 WEIGHTS = (0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0)
 VLM_ONLY = None  # weight value meaning "rank by the VLM score alone"
+# The VLM of the first runs; the results of any other VLM get its name in their file names.
+DEFAULT_VLM = ("Qwen/Qwen2-VL-2B-Instruct", "float16")
+SHORT_DTYPE = {"float16": "fp16", "bfloat16": "bf16", "float32": "fp32"}
+
+
+def vlm_tag(meta):
+  """File-name tag of the VLM run in meta: empty for the default one."""
+  if (meta["model"], meta["dtype"]) == DEFAULT_VLM and "adapter" not in meta:
+    return ""
+  tag = f"_{meta['model'].split('/')[-1].lower()}_{SHORT_DTYPE.get(meta['dtype'], meta['dtype'])}"
+  return tag + ("_lora-" + meta["adapter"].replace("/", "-") if "adapter" in meta else "")
+
+
+def output_stem(data, meta, output):
+  """Result path without extension: first stage, then VLM (Hướng 1 and 3 keep theirs apart)."""
+  ranker = data.get("ranker")
+  zero_shot = ranker in (None, f"magic_lens_clip_{data['model_size']}.pkl")
+  return os.path.join(output, f"fiq-{data['subtask']}-{data['model_size']}_vlm_rerank"
+                      + ("" if zero_shot else "_" + os.path.splitext(ranker)[0]) + vlm_tag(meta))
 
 
 def z(s):
@@ -192,15 +215,24 @@ if __name__ == "__main__":
   # Names of the first stage: the zero-shot baseline, or the fine-tuned model.
   base_name = "MagicLens zero-shot (baseline)" if zero_shot else "MagicLens tinh chỉnh (bước 1)"
   base_short = "baseline" if zero_shot else "MagicLens tinh chỉnh"
-  training = ("Không mô hình nào được huấn luyện trên FashionIQ; nhãn của nửa dev chỉ dùng để "
-              "chọn k và w." if zero_shot else
-              f"Bước 1 là MagicLens đã tinh chỉnh trên tập train của FashionIQ (`{ranker}`); VLM "
-              "không được huấn luyện thêm, và nhãn của nửa dev chỉ dùng để chọn k và w.")
+  adapter = meta.get("adapter")
+  if adapter is None:
+    training = ("Không mô hình nào được huấn luyện trên FashionIQ; nhãn của nửa dev chỉ dùng để "
+                "chọn k và w." if zero_shot else
+                f"Bước 1 là MagicLens đã tinh chỉnh trên tập train của FashionIQ (`{ranker}`); VLM "
+                "không được huấn luyện thêm, và nhãn của nửa dev chỉ dùng để chọn k và w.")
+  else:
+    training = (("Bước 1 là MagicLens zero-shot" if zero_shot else
+                 f"Bước 1 là MagicLens đã tinh chỉnh trên tập train của FashionIQ (`{ranker}`)")
+                + f"; VLM đã được tinh chỉnh LoRA trên tập train đó (`{adapter}`). Nhãn của nửa "
+                "dev dùng để chọn checkpoint LoRA (vlm_lora_train.py), k và w.")
+  vlm_name = f"`{meta['model']}` ({meta['dtype']})" + (f" + LoRA `{adapter}`" if adapter else "")
 
   md = [f"# Rerank top-K của MagicLens-{data['model_size']} bằng VLM trên FashionIQ "
-        f"{data['subtask']}" + ("" if zero_shot else " (bước 1: MagicLens tinh chỉnh)"),
+        f"{data['subtask']}" + ("" if zero_shot else " (bước 1: MagicLens tinh chỉnh)")
+        + (f", VLM {vlm_name}" if vlm_tag(meta) else ""),
         "",
-        f"VLM: `{meta['model']}` ({meta['dtype']}), chấm {K} ứng viên đầu của mỗi truy vấn bằng "
+        f"VLM: {vlm_name}, chấm {K} ứng viên đầu của mỗi truy vấn bằng "
         "log-odds logit(\"Yes\") − logit(\"No\"). Điểm mới = z(MagicLens) + w · z(VLM) trên k ứng "
         f"viên đầu. Truy vấn: dev {dev.sum()} / test {test.sum()} (cùng cách chia với "
         f"fiq_experiments.py). Chọn k và w theo R_avg của dev. {training}",
@@ -247,9 +279,8 @@ if __name__ == "__main__":
   md = "\n".join(md) + "\n"
 
   os.makedirs(args.output, exist_ok=True)
-  # The checkpoint's name keeps the results of each first stage apart.
-  stem = os.path.join(args.output, f"fiq-{data['subtask']}-{data['model_size']}_vlm_rerank"
-                      + ("" if zero_shot else "_" + os.path.splitext(ranker)[0]))
+  # The checkpoint's and the VLM's names keep the results of each run apart.
+  stem = output_stem(data, meta, args.output)
   with open(stem + ".md", "w") as f:
     f.write(md)
   with open(stem + ".json", "w") as f:
