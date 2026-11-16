@@ -74,6 +74,16 @@ Trên `CIRCO`
 | Large (gốc) | 29.6 | 30.8 | 33.4 | 34.4 |
 | Large (đã chuyển đổi) | 29.5 | 30.8 | 33.2 | 34.3 |
 
+## Tài liệu và thí nghiệm của dự án
+
+Phần này không có trong repo gốc.
+
+- [docs/kien_truc_pipeline.md](docs/kien_truc_pipeline.md): kiến trúc và pipeline của MagicLens.
+- [docs/ket_qua.md](docs/ket_qua.md): kết quả của bài báo và các kết quả dự án đã có.
+- [docs/tai_hien_benchmark.md](docs/tai_hien_benchmark.md) và [notebooks/](notebooks/): tái hiện các benchmark của bài báo trên Google Colab.
+- [docs/huong_dan_vlm_rerank.md](docs/huong_dan_vlm_rerank.md): rerank top-K của MagicLens bằng VLM (Qwen2-VL) trên FashionIQ.
+- [docs/huong1_tinh_chinh_rerank.md](docs/huong1_tinh_chinh_rerank.md): Hướng 1, ghép MagicLens đã tinh chỉnh với rerank bằng VLM.
+
 ## Trích dẫn công trình này
 
 Thêm thông tin trích dẫn tại đây, thường là một đoạn BibTeX có thể sao chép và dán:

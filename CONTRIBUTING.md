@@ -1,25 +1,19 @@
-# How to Contribute
+# Cách đóng góp
 
-## Contributor License Agreement
+## Thỏa thuận cấp phép cho người đóng góp
 
-Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution,
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <https://cla.developers.google.com/> to see
-your current agreements on file or to sign a new one.
+Mọi đóng góp cho dự án này phải kèm theo một Thỏa thuận cấp phép cho người đóng góp (Contributor License Agreement, CLA).
+Bạn (hoặc công ty nơi bạn làm việc) vẫn giữ bản quyền đối với phần đóng góp của mình; thỏa thuận này chỉ cho phép chúng tôi sử dụng và phân phối lại phần đóng góp đó như một phần của dự án.
+Truy cập <https://cla.developers.google.com/> để xem các thỏa thuận bạn đã ký hoặc để ký một thỏa thuận mới.
 
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
+Thông thường bạn chỉ cần ký CLA một lần, nên nếu đã ký trước đây (kể cả cho một dự án khác) thì có lẽ bạn không cần ký lại.
 
-## Code reviews
+## Xem xét mã (code review)
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+Mọi đóng góp gửi lên, kể cả của thành viên dự án, đều phải được xem xét.
+Chúng tôi dùng pull request trên GitHub cho việc này.
+Xem [Trợ giúp GitHub](https://help.github.com/articles/about-pull-requests/) để biết thêm về cách dùng pull request.
 
-## Community Guidelines
+## Nguyên tắc cộng đồng
 
-This project follows [Google's Open Source Community
-Guidelines](https://opensource.google/conduct/).
+Dự án này tuân theo [Nguyên tắc cộng đồng mã nguồn mở của Google](https://opensource.google/conduct/).

@@ -376,3 +376,159 @@ arrow(ax, q4["r"], (ev["l"][0], q4["r"][1]))
 ax.text(48, 38.6, "Lưu ý: bóp méo tỉ lệ khung hình; CIRCO cần ~74 GB RAM nếu giữ toàn bộ ảnh", ha="center",
         va="top", fontsize=7.4, color="#a06c00")
 save(fig, "05_suy_luan.png")
+
+# =====================================================================
+# 6. Hướng 1: kiến trúc (docs/huong1_tinh_chinh_rerank.md)
+# =====================================================================
+C["vlm"] = ("#fbe9f3", "#c2408f")
+fig, ax = canvas(15, 9.2)
+title(ax, 2, 90, "Hướng 1: MagicLens tinh chỉnh ở bước 1, VLM rerank top-50 ở bước 2",
+      "FashionIQ dress: kho 3653 ảnh val; 1861 truy vấn chia dev 930 / test 931 (seed 0). "
+      "Số trong hình là kết quả trên test.")
+# Phần trên: huấn luyện bước 1
+ax.add_patch(Rectangle((1, 58.5), 148, 23, fc="none", ec=C["train"][1], lw=1, ls=(0, (4, 3))))
+ax.text(3, 80.2, "HUẤN LUYỆN MỘT LẦN: fiq_finetune.py (máy, CPU, 17.6 phút)", fontsize=9, fontweight="bold",
+        color=C["train"][1], va="top")
+ay, ah = 61, 13
+a1 = box(ax, 4, ay, 22, ah, "FIQ dress train", ["5441 truy vấn, 10 878 ảnh",
+                                                "(ảnh tham chiếu, \"c1 and c2\", ảnh đích)"], kind="white", fs=7.8)
+a2 = box(ax, 30, ay, 24, ah, "Backbone CLIP ViT-B/16", ["đóng băng",
+                                                        "đặc trưng ảnh và văn bản tính một lần, lưu ở cache/"],
+         kind="neutral", fs=7.8)
+a3 = box(ax, 58, ay, 28, ah, "Khối hợp nhất (được học)", ["4 khối self-attention + attention pooling + nhiệt độ τ",
+                                                          "16.8M tham số, khởi tạo từ checkpoint gốc"],
+         kind="model", fs=7.8, title_color=C["model"][1])
+a4 = box(ax, 95, ay, 25, ah, "Loss tương phản", ["mẫu âm: ảnh đích khác trong batch và chính các ảnh truy vấn",
+                                                 "AdamW, lr 1e-5, batch 128, 15 epoch"],
+         kind="train", fs=7.8, title_color=C["train"][1])
+a5 = box(ax, 124, ay, 24, ah, "Chọn epoch trên dev", ["epoch 14: dev R_avg 45.3", "R@10 test: 23.3 → 34.2",
+                                                      "R@50 test: 42.1 → 57.9"],
+         kind="infer", fs=7.8, title_color=C["infer"][1])
+arrow(ax, a1["r"], a2["l"])
+arrow(ax, a2["r"], a3["l"])
+arrow(ax, (a3["r"][0], a3["r"][1] + 2.5), (a4["l"][0], a4["l"][1] + 2.5), "r_q, r_t", fs=7, label_dy=0.4)
+arrow(ax, (a4["l"][0], a4["l"][1] - 2.5), (a3["r"][0], a3["r"][1] - 2.5), color=C["train"][1])
+ax.text((a3["r"][0] + a4["l"][0]) / 2, a3["r"][1] - 3.3, "gradient", ha="center", va="top", fontsize=7,
+        color=C["train"][1])
+poly_arrow(ax, [a3["t"], (a3["t"][0], 77.3), (a5["t"][0], 77.3), a5["t"]])
+ax.text(104, 77.8, "tham số sau mỗi epoch", ha="center", va="bottom", fontsize=7.5, color=INK2)
+# Checkpoint đi xuống bước 1
+ck_y, drop_x = 56, 36
+ax.plot([a5["b"][0], a5["b"][0], drop_x], [a5["b"][1], ck_y, ck_y], color=C["model"][1], lw=1.6, zorder=4,
+        solid_capstyle="round", solid_joinstyle="round")
+ax.text(88, ck_y, "checkpoint tinh chỉnh E_ft:  models/magic_lens_clip_base_fiq_dress_ft.pkl", ha="center",
+        va="center", fontsize=7.5, color=C["model"][1], zorder=5, bbox=dict(boxstyle="round,pad=0.3", fc="white",
+                                                                          ec="none"))
+# Phần dưới: truy xuất hai bước
+ax.add_patch(Rectangle((1, 2), 148, 51.5, fc="none", ec=C["data"][1], lw=1, ls=(0, (4, 3))))
+ax.text(3, 52.1, "TRUY XUẤT: mỗi truy vấn", fontsize=9, fontweight="bold", color=C["data"][1], va="top")
+by, bh = 29, 18
+q = box(ax, 4, 38.5, 19, 8.5, "Truy vấn", ["ảnh tham chiếu", "+ \"c1 and c2\""], kind="white", fs=7.8,
+        bullet=False, align="center")
+idx = box(ax, 4, by, 19, 8.5, "Kho ảnh", ["3653 ảnh dress val", "E_ft(ảnh, \"\")"], kind="white", fs=7.8,
+          bullet=False, align="center")
+b1 = box(ax, 27, by, 26, bh, "Bước 1: MagicLens tinh chỉnh", [
+    "mã hóa truy vấn: E_ft(ảnh, chỉ dẫn)",
+    "s_ML = cosine với từng ảnh trong kho",
+    "giữ 50 ảnh có s_ML cao nhất",
+    "trần của bước 2: ảnh đích có trong top-50 ở 57.9% truy vấn (zero-shot: 42.1%)",
+], kind="model", fs=7.8, title_color=C["model"][1])
+b2 = box(ax, 58, by, 34, bh, "Bước 2: VLM Qwen2-VL-2B-Instruct", [
+    "chấm từng cặp (truy vấn, ứng viên); không huấn luyện thêm",
+    "đầu vào: ảnh tham chiếu, ảnh ứng viên và câu hỏi Yes/No (khung dưới)",
+    "s_VLM = logit(\"Yes\") − logit(\"No\") ở token trả lời đầu tiên",
+    "50 × 1861 = 93 050 cặp, float16",
+], kind="vlm", fs=7.8, title_color=C["vlm"][1])
+b3 = box(ax, 97, by, 28, bh, "Trộn điểm, xếp lại top-k", [
+    "z(·): chuẩn hóa trên k ứng viên của từng truy vấn",
+    "s = z(s_ML) + w · z(s_VLM)",
+    "ảnh ngoài top-k giữ hạng cũ",
+    "k ∈ {20, 30, 50} và w chọn theo R_avg trên dev",
+], kind="data", fs=7.8, title_color=C["data"][1])
+b4 = box(ax, 129, 30.5, 18, 15, "Kết quả", ["danh sách xếp hạng mới", "R@1, 5, 10, 50 trên test",
+                                            "so với (c) bằng bootstrap ghép cặp"], kind="infer", fs=7.8,
+         title_color=C["infer"][1])
+arrow(ax, (drop_x, ck_y), (drop_x, b1["t"][1]), color=C["model"][1], lw=1.6)
+arrow(ax, q["r"], (b1["l"][0], q["r"][1]))
+arrow(ax, idx["r"], (b1["l"][0], idx["r"][1]))
+arrow(ax, b1["r"], b2["l"], "top-50", fs=7.5, label_dy=0.5)
+arrow(ax, b2["r"], b3["l"], "s_VLM", fs=7.5, label_dy=0.5)
+arrow(ax, b3["r"], b4["l"])
+poly_arrow(ax, [(46, b1["t"][1]), (46, 49.8), (111, 49.8), (111, b3["t"][1])])
+ax.text(78.5, 50.3, "s_ML của 50 ứng viên", ha="center", va="bottom", fontsize=7.5, color=INK2)
+for b, txt_, kind in [(b1, "vlm_rerank_prepare.py · máy, CPU", "model"), (b2, "vlm_rerank.py · Colab, GPU", "vlm"),
+                      (b3, "vlm_rerank_eval.py · máy, CPU", "data")]:
+    badge(ax, b["b"][0], by - 3, txt_, kind)
+# Câu hỏi gửi VLM
+ax.add_patch(FancyBboxPatch((58, 4), 89, 13.5, boxstyle="round,pad=0,rounding_size=1.2", fc="white",
+                            ec=C["vlm"][1], lw=1, ls=(0, (3, 2)), zorder=2))
+ax.text(60, 16, "Câu hỏi gửi VLM (truy vấn test đầu tiên; hai ảnh đứng trước câu hỏi)", fontsize=8,
+        fontweight="bold", color=C["vlm"][1], va="top")
+for i, ln in enumerate([
+        "[ảnh tham chiếu] [ảnh ứng viên]",
+        "The first image shows a reference dress. The second image shows a candidate dress.",
+        "Requested change to the reference dress: \"is shiny and silver with shorter sleeves and fit and flare\".",
+        "Does the candidate dress look like the reference dress after the requested change? Answer Yes or No."]):
+    # Dòng đầu có chữ tiếng Việt, mà DejaVu Sans Mono thiếu một số dấu.
+    ax.text(60, 13.3 - i * 2.2, ln, fontsize=7, family="DejaVu Sans" if i == 0 else "DejaVu Sans Mono",
+            color=INK2, va="top")
+arrow(ax, (64, 17.5), (64, by), color=C["vlm"][1], lw=1)
+# Các cấu hình so sánh
+box(ax, 4, 4, 50, 13.5, "Các cấu hình so sánh (R@10 test)", [
+    "(c) chỉ bước 1: 34.2",
+    "(d) xếp lại top-20 chỉ theo s_VLM (s_ML chỉ để phá hòa): 35.2",
+    "(e) trộn hai điểm như trong hình (k = 50, w = 1.5): 36.6",
+    "(a), (b): cùng sơ đồ nhưng bước 1 là checkpoint gốc: 23.3 và 28.5",
+], kind="neutral", fs=7.6)
+save(fig, "06_huong1_kien_truc.png")
+
+# =====================================================================
+# 7. Hướng 1: nơi chạy từng bước
+# =====================================================================
+fig, ax = canvas(15, 6.2)
+title(ax, 2, 60, "Hướng 1: mỗi bước chạy ở đâu, truyền tệp gì",
+      "Bước 1, 2, 5 chạy trên máy (CPU). Bước 4 cần GPU nên chạy trên Colab. Google Drive là chỗ trung chuyển.")
+for name, y, h, kind in [("Máy\n(CPU)", 36, 16, "model"), ("Google\nDrive", 20, 16, "neutral"),
+                         ("Colab\n(GPU)", 2, 18, "vlm")]:
+    fc, ec = C[kind]
+    ax.add_patch(Rectangle((1, y), 148, h, fc="#faf9f6" if kind == "neutral" else fc, ec="none", alpha=0.45,
+                           zorder=0))
+    ax.add_patch(Rectangle((1, y), 148, h, fc="none", ec=LINE, lw=1, zorder=1))
+    ax.text(8.5, y + h / 2, name, ha="center", va="center", fontsize=9.5, fontweight="bold",
+            color=INK2 if kind == "neutral" else ec)
+s1 = box(ax, 18, 39, 30, 10.5, "1. Tinh chỉnh", ["fiq_finetune.py · 17.6 phút",
+                                                  "→ models/…_fiq_dress_ft.pkl"], kind="white", fs=7.8)
+s2 = box(ax, 53, 39, 32, 10.5, "2. Xuất top-50", ["vlm_rerank_prepare.py · 1.1 phút",
+                                                  "→ vlm_rerank_ft/candidates.json",
+                                                  "→ vlm_rerank_ft/bundle.zip (291 MB)"], kind="white", fs=7.8)
+s5 = box(ax, 110, 39, 38, 10.5, "5. Đánh giá và tổng hợp", ["vlm_rerank_eval.py: chọn k, w trên dev",
+                                                            "huong1_tong_hop.py: bảng (a)–(e), bootstrap",
+                                                            "→ output/huong1/huong1_tong_hop.md"],
+         kind="white", fs=7.8)
+d1 = box(ax, 53, 23, 32, 9, "MyDrive/magiclens_vlm_ft/", ["bundle.zip (không giải nén)"], kind="white", fs=7.8,
+         bullet=False, align="center")
+d2 = box(ax, 110, 23, 38, 9, "MyDrive/magiclens_vlm_ft/", ["vlm_scores.jsonl", "vlm_scores.jsonl.meta.json"],
+         kind="white", fs=7.8, bullet=False, align="center")
+c1 = box(ax, 74, 4.5, 50, 12, "4. vlm_rerank_colab.ipynb (T4, L4 hoặc A100)", [
+    "giải nén bundle, in tên checkpoint của bước 1 để kiểm tra",
+    "chạy vlm_rerank.py: 93 050 cặp, 0.9 giờ GPU ở lần chạy Hướng 1",
+    "ghi điểm sau mỗi truy vấn; mất kết nối thì chạy lại, script làm tiếp",
+], kind="white", fs=7.8)
+LBL = dict(fontsize=8, color=INK2, va="center", zorder=5, bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none"))
+arrow(ax, s1["r"], s2["l"])
+arrow(ax, s2["r"], s5["l"], "candidates.json", fs=7.5, label_dy=0.5)
+arrow(ax, s2["b"], d1["t"])
+ax.text(s2["b"][0] - 1.5, 36, "3. tải lên", ha="right", **LBL)
+arrow(ax, (77, d1["b"][1]), (88, c1["t"][1]))
+ax.text(80.5, 20, "đọc", ha="right", **LBL)
+arrow(ax, (112, c1["t"][1]), (122, d2["b"][1]))
+ax.text(118.5, 20, "ghi dần", ha="left", **LBL)
+arrow(ax, d2["t"], s5["b"])
+ax.text(d2["t"][0] - 1.5, 36, "tải về, chép vào vlm_rerank_ft/", ha="right", **LBL)
+for x, y, lines in [(18, 31, ["Mỗi tập ứng viên một thư mục Drive riêng:", "điểm VLM được ghi cạnh bundle.zip.",
+                              "magiclens_vlm/ đang giữ bản zero-shot cũ."]),
+                    (18, 14.5, ["Giữ nguyên MODEL, TOP_K = 50, DTYPE = float16", "như lần rerank zero-shot, để (e) và (b)",
+                                "chỉ khác nhau ở bước 1.", "Chỉ BATCH_SIZE là đổi được."])]:
+    for i, ln in enumerate(lines):
+        ax.text(x, y - i * 2.1, ln, fontsize=7.6, color=MUTED, va="top")
+save(fig, "07_huong1_quy_trinh.png")

@@ -4,28 +4,28 @@ mkdir circo
 cd circo
 ```
 
-In folder `magic_lens/data/circo`
+Trong thư mục `magic_lens/data/circo`
 
-### Download annotations
+### Tải nhãn (annotations)
 
 ```
 git clone https://github.com/miccunifi/CIRCO.git
 mv ./CIRCO/annotations ./
-# rm -rf ./CIRCO (unused)
+# rm -rf ./CIRCO (không dùng đến)
 ```
 
-### Download images
+### Tải ảnh
 ```
 mkdir COCO2017_unlabeled
-# download images
+# tải ảnh
 wget http://images.cocodataset.org/zips/unlabeled2017.zip
 unzip unlabeled2017.zip -d COCO2017_unlabeled
-# download info
+# tải thông tin ảnh
 wget http://images.cocodataset.org/annotations/image_info_unlabeled2017.zip
 unzip image_info_unlabeled2017.zip -d COCO2017_unlabeled
 ```
 
-The file structure should look like this (w/o showing CIRCO repo):
+Cấu trúc thư mục cần có như sau (không hiển thị repo CIRCO):
 ```
 circo
 └─── annotations
@@ -49,12 +49,12 @@ mkdir fiq
 cd fiq
 ```
 
-### Download FIQ
-Donload dataset following [FashionIQ](https://github.com/XiaoxiaoGuo/fashion-iq/issues/18)
+### Tải FIQ
+Tải bộ dữ liệu theo hướng dẫn tại [FashionIQ](https://github.com/XiaoxiaoGuo/fashion-iq/issues/18)
 
-Uncompress `images.tar.gz`, `image_splits-20220326T130551Z-001.zip`, and `captions-20220326T130604Z-001.zip` accordingly.
+Giải nén tương ứng các tệp `images.tar.gz`, `image_splits-20220326T130551Z-001.zip` và `captions-20220326T130604Z-001.zip`.
 
-The file structure should look like this (w/o showing train/test.json):
+Cấu trúc thư mục cần có như sau (không hiển thị các tệp train/test.json):
 ```
 ├── README.md
 ├── captions
@@ -80,16 +80,16 @@ The file structure should look like this (w/o showing train/test.json):
 mkdir dtin
 cd dtin
 
-# get labels and queries from Pic2Word
+# lấy nhãn và truy vấn từ Pic2Word
 wget https://raw.githubusercontent.com/google-research/composed_image_retrieval/refs/heads/main/data/imgnet/imgnet_real_query.txt
 wget https://raw.githubusercontent.com/google-research/composed_image_retrieval/refs/heads/main/data/imgnet/imgnet_targets.txt
 ```
 
-### Download DTIN
-Donload ImageNet-R dataset following [ImageNet R](https://github.com/hendrycks/imagenet-r?tab=readme-ov-file)
-Download ImageNet Validation dataset following [ImageNet Real](https://github.com/hendrycks/imagenet-real?tab=readme-ov-file)
+### Tải DTIN
+Tải bộ dữ liệu ImageNet-R theo hướng dẫn tại [ImageNet R](https://github.com/hendrycks/imagenet-r?tab=readme-ov-file)
+Tải tập validation của ImageNet theo hướng dẫn tại [ImageNet Real](https://github.com/hendrycks/imagenet-real?tab=readme-ov-file)
 
-Uncompress `imagenet-r.tar` and `imagenet-real.tar` accordingly.
+Giải nén tương ứng các tệp `imagenet-r.tar` và `imagenet-real.tar`.
 ```
 wget https://people.eecs.berkeley.edu/\~hendrycks/imagenet-r.tar
 tar -xf imagenet-r.tar
@@ -97,18 +97,19 @@ wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar --no-check-ce
 
 tar -xf ILSVRC2012_img_val.tar
 sh ./extract_ILSVRC.sh
+```
 
-The file structure should look like this (w/o showing train/test.json):
+Cấu trúc thư mục cần có như sau (không hiển thị các tệp train/test.json):
 
 ```bash
 ├── dtin
-    ├── imagenet-r ## unzipped imagenet-r directories containing images. This folder should contain subfolders.
+    ├── imagenet-r ## các thư mục ảnh imagenet-r sau khi giải nén. Thư mục này phải chứa các thư mục con.
             └──n01443537
                   .
                   . 
     ├── imgnet_real_query.txt
     ├── imgnet_targets.txt
-    └── real ## imagenet validation directories containing images. This folder should contain subfolders.
+    └── real ## các thư mục ảnh validation của imagenet. Thư mục này phải chứa các thư mục con.
         └──n01440764
                   .
                   . 

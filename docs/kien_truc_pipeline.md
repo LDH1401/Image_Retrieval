@@ -30,7 +30,7 @@ Cùng một mạng `E` (dùng chung tham số) mã hóa cả truy vấn `(ảnh,
 
 1. **Tiền xử lý ảnh:** cắt vùng vuông ở giữa, resize 224 × 224, chuẩn hóa theo CLIP ([model.py:99](../model.py#L99)).
 2. **Backbone CLIP:** mã hóa ảnh và văn bản thành hai vector `v`, `t` ∈ ℝᴰ, chưa chuẩn hóa ([model.py:112](../model.py#L112)).
-3. **Ghép chuỗi** `[v ; t]` có kích thước `[B, 2, D]` ([model.py:175](../model.py#L175)).
+3. **Ghép chuỗi** `[v ; t]` có kích thước `[B, 2, D]` ([model.py:199](../model.py#L199)).
 4. **4 khối self-attention** kiểu Pre-LN, FFN 4D, có kết nối tắt (`StackedTransformer` trong [layers.py](../layers.py)).
 5. **Attention pooling** với 1 vector truy vấn học được, rồi **chuẩn hóa L2**.
 
@@ -64,13 +64,13 @@ Thiết lập: batch 2048 (mỗi truy vấn có 4095 mẫu âm), τ học đư�
 
 **Offline:** mã hóa toàn bộ kho ảnh với chuỗi rỗng, `E(ảnh, "")`, theo lô 1024, được `index_embeddings` có kích thước `[M, D]`.
 
-**Online:** ghép câu chỉ dẫn theo mẫu của từng benchmark, mã hóa `E(ảnh, chỉ dẫn)`, nhân với chỉ mục ([inference.py:127](../inference.py#L127)), rồi sắp xếp lấy top-50 ([inference.py:129](../inference.py#L129)).
+**Online:** ghép câu chỉ dẫn theo mẫu của từng benchmark, mã hóa `E(ảnh, chỉ dẫn)`, nhân với chỉ mục ([inference.py:130](../inference.py#L130)), rồi sắp xếp lấy top-50 ([inference.py:132](../inference.py#L132)).
 
 | Benchmark | Mẫu chỉ dẫn trong mã | Đánh giá |
 |---|---|---|
 | FIQ | `"<mô tả 1> and <mô tả 2>"` | Recall@10, @50 tại máy |
 | CIRCO | `"find {shared_concept} but {relative_caption}"` | Ghi top-50 ra JSON, nộp máy chủ chấm mAP@K |
-| DTIN | `"find this object in {domain}"` ([data_utils.py:218](../data_utils.py#L218)) | Recall@10, @50 tại máy |
+| DTIN | `"find this object in {domain}"` ([data_utils.py:253](../data_utils.py#L253)) | Recall@10, @50 tại máy |
 
 Lưu ý khi chạy:
 - `process_img` ([data_utils.py:97](../data_utils.py#L97)) resize thẳng về 224 × 224 nên bóp méo tỉ lệ khung hình. Vì ảnh đã vuông, bước cắt vùng vuông trong mô hình không còn tác dụng.
@@ -78,7 +78,7 @@ Lưu ý khi chạy:
 
 ## Vẽ lại sơ đồ
 
-Các hình trong `images/` được sinh từ [`src/ve_so_do.py`](src/ve_so_do.py). Muốn chỉnh nội dung hay bố cục thì sửa script rồi chạy lại (cần `matplotlib`):
+Các hình trong `images/` được sinh từ [`src/ve_so_do.py`](src/ve_so_do.py), gồm cả hai hình 06 và 07 của [Hướng 1](huong1_tinh_chinh_rerank.md). Muốn chỉnh nội dung hay bố cục thì sửa script rồi chạy lại (cần `matplotlib`):
 
 ```bash
 python docs/src/ve_so_do.py docs/images
